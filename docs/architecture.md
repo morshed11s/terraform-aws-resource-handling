@@ -5,49 +5,89 @@ Each environment is configured with its own file under `envs/`. The same Terrafo
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"background": "#ffffff", "mainBkg": "#ffffff", "fontFamily": "Segoe UI, Arial, sans-serif", "fontSize": "14px", "primaryTextColor": "#263746", "lineColor": "#8796a3", "edgeLabelBackground": "#ffffff"}, "flowchart": {"curve": "linear", "nodeSpacing": 38, "rankSpacing": 54, "htmlLabels": true}}}%%
 flowchart TB
-  subgraph INPUTS["ENVIRONMENT CONFIGURATION"]
+  subgraph CONFIG["ENVIRONMENT CONFIGURATION · one root codebase, no modules"]
     direction LR
-    ENV["Environment tfvars<br/>dev · staging · prod"] --> TF["Terraform root<br/>AWS provider · variables · names · tags"]
+    DEV["envs/dev.tfvars<br/>versioning off · 7-day lifecycle<br/>prevent_destroy false"]
+    STG["envs/staging.tfvars<br/>versioning on · closer to prod<br/>prevent_destroy false"]
+    PRD["envs/prod.tfvars<br/>versioning on · 90-day lifecycle<br/>prevent_destroy true · stricter tags"]
   end
 
-  CI["GitHub Actions<br/>TFLint · format · validate"]
+  subgraph ROOT["TERRAFORM ROOT · flat files"]
+    direction LR
+    VARS["variables.tf<br/>validation: env · project · lifecycle<br/>EC2 never allowed in prod"]
+    LOCALS["locals.tf<br/>name_prefix · env_short · region_short<br/>common_tags"]
+    DATA["data.tf<br/>default VPC · caller identity · AMI"]
+  end
 
-  subgraph AWS["AWS ACCOUNT · selected region"]
+  subgraph RUN["COMMANDS"]
+    direction LR
+    APPLY["dev<br/>plan → apply → output → destroy"]
+    PLAN["staging · prod<br/>plan only, never applied"]
+  end
+
+  subgraph AWS["AWS ACCOUNT · us-east-1 · dev only, destroyed after verification"]
     direction TB
 
-    subgraph CORE["BASELINE RESOURCES"]
+    subgraph CORE["CORE RESOURCES · on in every env, each behind an enable_* flag"]
       direction LR
-      S3["Amazon S3<br/>Private bucket"]
-      VPC["Default VPC"] --> SG["Security group<br/>SSH only from supplied CIDRs"]
+      S3["s3.tf · Amazon S3<br/>app bucket · ownership controls<br/>public access block · versioning by env<br/>lifecycle rule via dynamic block"]
+      DDB["dynamodb.tf · DynamoDB<br/>config table · PAY_PER_REQUEST<br/>count"]
+      IAM["iam.tf · IAM role<br/>trust policy · least-privilege policy<br/>dynamic statement"]
+      SSM["ssm.tf · SSM Parameter Store<br/>Standard String · for_each"]
+      CW["cloudwatch.tf · CloudWatch Logs<br/>app · worker · short retention<br/>for_each"]
     end
 
-    subgraph OPTIONAL["OPTIONAL RESOURCES · variable controlled"]
+    subgraph NET["NETWORK · no cost"]
       direction LR
-      IAM["IAM role<br/>Scoped policy"]
-      DDB["DynamoDB<br/>PAY_PER_REQUEST"]
-      SSM["SSM Parameter Store<br/>Standard String"]
-      CW["CloudWatch Logs<br/>Per-environment retention"]
-      EC2["EC2 test instance<br/>Dev only · off by default"]
+      VPC["Default VPC<br/>read via data source"] --> SG["security-group.tf<br/>ingress from allowed_cidr_blocks"]
+    end
+
+    subgraph OPT["OPTIONAL · off by default"]
+      EC2["ec2-optional.tf · EC2 test instance<br/>count = 0 · dev only · never prod"]
     end
   end
 
-  TF --> CORE
-  TF -.-> OPTIONAL
-  CI -. "checks only · no deployment" .-> TF
-  IAM -. "scoped permissions" .-> S3
-  IAM -. "parameter reads" .-> SSM
-  SG -. "attached if EC2 enabled" .-> EC2
+  subgraph RESULTS["OUTPUTS AND EVIDENCE"]
+    direction LR
+    OUT["outputs.tf<br/>names · ARNs · null when disabled"]
+    EVD["evidence/<br/>fmt · validate · 3 plans<br/>apply · output · destroy"]
+  end
+
+  subgraph BONUS["BONUS · not deployed"]
+    direction LR
+    CI["GitHub Actions · Makefile<br/>fmt · validate · tflint"]
+    BE["backend-example.tf<br/>S3 state + DynamoDB lock design"]
+  end
+
+  CONFIG -- "-var-file" --> ROOT
+  ROOT --> RUN
+  RUN == "apply dev only" ==> AWS
+  IAM -. "scoped access" .-> S3
+  IAM -. "read params" .-> SSM
+  IAM -. "item access" .-> DDB
+  IAM -. "write logs" .-> CW
+  SG -. "attached if enabled" .-> EC2
+  AWS --> RESULTS
+  RUN -. "saved outputs" .-> RESULTS
+  BONUS -. "checks and design only" .-> ROOT
 
   classDef config fill:#eef3f8,stroke:#8da0af,color:#263746,stroke-width:1.2px
   classDef core fill:#edf4ef,stroke:#91a99a,color:#294337,stroke-width:1.2px
   classDef optional fill:#f5f2eb,stroke:#b2a488,color:#443e32,stroke-width:1.2px
-  class ENV,TF,CI config
-  class S3,VPC,SG core
-  class IAM,SSM,DDB,CW,EC2 optional
-  style INPUTS fill:#ffffff,stroke:#c8d2da,color:#344653,stroke-width:1px
+  classDef result fill:#f3f0f7,stroke:#a89cb8,color:#3a3247,stroke-width:1.2px
+  class DEV,STG,PRD,VARS,LOCALS,DATA,APPLY,PLAN config
+  class S3,DDB,IAM,SSM,CW,VPC,SG core
+  class EC2 optional
+  class OUT,EVD,CI,BE result
+  style CONFIG fill:#ffffff,stroke:#c8d2da,color:#344653,stroke-width:1px
+  style ROOT fill:#ffffff,stroke:#c8d2da,color:#344653,stroke-width:1px
+  style RUN fill:#ffffff,stroke:#c8d2da,color:#344653,stroke-width:1px
   style AWS fill:#ffffff,stroke:#aebdc8,color:#344653,stroke-width:1.2px
   style CORE fill:#ffffff,stroke:#c8d6cd,color:#3d5547,stroke-width:1px
-  style OPTIONAL fill:#ffffff,stroke:#ded6c6,color:#554c3d,stroke-width:1px
+  style NET fill:#ffffff,stroke:#c8d6cd,color:#3d5547,stroke-width:1px
+  style OPT fill:#ffffff,stroke:#ded6c6,color:#554c3d,stroke-width:1px
+  style RESULTS fill:#ffffff,stroke:#d6cfe0,color:#3a3247,stroke-width:1px
+  style BONUS fill:#ffffff,stroke:#d6cfe0,color:#3a3247,stroke-width:1px
 ```
 
 Solid arrows show configuration flow and the default-VPC relationship. Dashed arrows show validation, optional provisioning, IAM policy scope, and the conditional EC2 security-group attachment. The IAM role has an EC2 trust policy but is not attached to the test instance. CI runs checks only; it does not apply infrastructure.
