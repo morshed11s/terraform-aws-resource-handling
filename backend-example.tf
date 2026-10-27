@@ -1,5 +1,5 @@
-# Before using a remote backend, create the S3 state bucket and lock table
-# separately, then uncomment this block and run terraform init -migrate-state.
+# How to use: Before using a remote backend, create the S3 state bucket and lock 
+# table separately, then uncomment this block and run terraform init -migrate-state.
 # Do not store credentials in this file.
 #
 # terraform {

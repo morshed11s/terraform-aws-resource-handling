@@ -179,15 +179,15 @@ variable "enable_ec2_test_instance" {
     condition     = !var.enable_ec2_test_instance || var.environment == "dev"
     error_message = "EC2 test instance is permitted only in dev."
   }
+
+  validation {
+    condition     = !var.enable_ec2_test_instance || var.ec2_free_tier_approved
+    error_message = "Set ec2_free_tier_approved=true only after confirming account eligibility and expected charges."
+  }
 }
 
 variable "ec2_free_tier_approved" {
   description = "Explicit acknowledgement that the AWS account has applicable free-tier approval before enabling EC2."
   type        = bool
   default     = false
-
-  validation {
-    condition     = !var.enable_ec2_test_instance || var.ec2_free_tier_approved
-    error_message = "Set ec2_free_tier_approved=true only after confirming account eligibility and expected charges."
-  }
 }
