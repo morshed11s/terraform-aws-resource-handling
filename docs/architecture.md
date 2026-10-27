@@ -1,56 +1,64 @@
 # Architecture
 
-Each environment is configured with its own file under `envs/`. The same Terraform root creates resources in the selected AWS region; optional services are controlled by variables in the selected file.
+Each environment is configured with its own file under `envs/`. The same Terraform root manages the selected AWS region; optional services are controlled by variables in the selected file. Per assignment, apply and destroy dev only; staging and prod are plan-only.
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"edgeLabelBackground": "#f5f2eb"}, "flowchart": {"curve": "linear", "nodeSpacing": 32, "rankSpacing": 48}}}%%
-flowchart LR
-  ENV["Environment tfvars<br/>dev · staging · prod"]
-  TF["Terraform root<br/>AWS provider · names · tags"]
-  ENV --> TF
+%%{init: {"theme": "base", "themeVariables": {"background": "#ffffff", "mainBkg": "#ffffff", "fontFamily": "Segoe UI, Arial, sans-serif", "fontSize": "14px", "primaryTextColor": "#263746", "lineColor": "#8796a3", "edgeLabelBackground": "#ffffff"}, "flowchart": {"curve": "linear", "nodeSpacing": 38, "rankSpacing": 54, "htmlLabels": true}}}%%
+flowchart TB
+  subgraph INPUTS["ENVIRONMENT CONFIGURATION"]
+    direction LR
+    ENV["Environment tfvars<br/>dev · staging · prod"] --> TF["Terraform root<br/>AWS provider · variables · names · tags"]
+  end
 
-  subgraph AWS["AWS account · selected region"]
+  CI["GitHub Actions<br/>TFLint · format · validate"]
+
+  subgraph AWS["AWS ACCOUNT · selected region"]
     direction TB
 
-    subgraph CORE["Core resources"]
+    subgraph CORE["BASELINE RESOURCES"]
       direction LR
-      S3["Private S3 bucket"]
-      VPC["Default VPC"] --> SG["Security group"]
+      S3["Amazon S3<br/>Private bucket"]
+      VPC["Default VPC"] --> SG["Security group<br/>SSH only from supplied CIDRs"]
     end
 
-    subgraph OPTIONAL["Feature-flagged services"]
+    subgraph OPTIONAL["OPTIONAL RESOURCES · variable controlled"]
       direction LR
-      IAM["IAM role + policy"]
-      DDB["DynamoDB"]
-      SSM["SSM parameters"]
-      CW["CloudWatch logs"]
-      EC2["EC2 test instance"]
+      IAM["IAM role<br/>Scoped policy"]
+      DDB["DynamoDB<br/>PAY_PER_REQUEST"]
+      SSM["SSM Parameter Store<br/>Standard String"]
+      CW["CloudWatch Logs<br/>Per-environment retention"]
+      EC2["EC2 test instance<br/>Dev only · off by default"]
     end
-
-    IAM -. scoped access .-> S3
-    IAM -. parameter reads .-> SSM
-    SG -->|attached to| EC2
   end
 
   TF --> CORE
-  TF -. optional settings .-> OPTIONAL
+  TF -.-> OPTIONAL
+  CI -. "checks only · no deployment" .-> TF
+  IAM -. "scoped permissions" .-> S3
+  IAM -. "parameter reads" .-> SSM
+  SG -. "attached if EC2 enabled" .-> EC2
 
-  classDef config fill:#eef3f8,stroke:#8497a8,color:#263746
-  classDef core fill:#edf4ef,stroke:#91a99a,color:#294337
-  classDef optional fill:#f5f2eb,stroke:#b2a488,color:#443e32
-  class ENV,TF config
+  classDef config fill:#eef3f8,stroke:#8da0af,color:#263746,stroke-width:1.2px
+  classDef core fill:#edf4ef,stroke:#91a99a,color:#294337,stroke-width:1.2px
+  classDef optional fill:#f5f2eb,stroke:#b2a488,color:#443e32,stroke-width:1.2px
+  class ENV,TF,CI config
   class S3,VPC,SG core
-  class IAM,DDB,SSM,CW,EC2 optional
-  style AWS fill:#fbfcfd,stroke:#b8c5ce,color:#344653
-  style CORE fill:#f7faf8,stroke:#c8d6cd,color:#3d5547
-  style OPTIONAL fill:#fcfaf6,stroke:#ded6c6,color:#554c3d
+  class IAM,SSM,DDB,CW,EC2 optional
+  style INPUTS fill:#ffffff,stroke:#c8d2da,color:#344653,stroke-width:1px
+  style AWS fill:#ffffff,stroke:#aebdc8,color:#344653,stroke-width:1.2px
+  style CORE fill:#ffffff,stroke:#c8d6cd,color:#3d5547,stroke-width:1px
+  style OPTIONAL fill:#ffffff,stroke:#ded6c6,color:#554c3d,stroke-width:1px
 ```
 
-The bucket is private. SSH is closed unless CIDRs are supplied. The IAM policy is scoped to the bucket and SSM parameters; the role has an EC2 trust policy but is not attached to the test instance. DynamoDB uses on-demand billing, SSM values are standard-tier strings, and log retention is configured per environment.
+Solid arrows show configuration flow and the default-VPC relationship. Dashed arrows show validation, optional provisioning, IAM policy scope, and the conditional EC2 security-group attachment. The IAM role has an EC2 trust policy but is not attached to the test instance. CI runs checks only; it does not apply infrastructure.
+
+The bucket is private. The supplied tfvars files use `us-east-1`; other configured regions are selected through the environment setting. DynamoDB is on-demand, SSM values are standard-tier strings, and log retention is configured per environment.
 
 The supplied environment files enable DynamoDB, IAM, SSM, and CloudWatch logs. S3 versioning is off in dev and on in staging and prod; lifecycle expiration is enabled in all three. EC2 is off in every supplied environment and is restricted to dev with explicit approval.
 
-This is a configuration-only project; no AWS resources have been applied. No Terraform modules are used. Resource names are assembled in `locals.tf` from company, project, the `owner` and `student_id` variables, environment, resource type, and region; for example, `bjit-tfassign-sumaiya-30245-dev-config-table-use1`.
+No Terraform modules are used. Resource names are assembled in `locals.tf` from company, project, the `owner` and `student_id` variables, environment, resource type, and region; for example, `bjit-tfassign-sumaiya-30245-dev-config-table-use1`.
+
+The repository includes AWS screenshots and an earlier apply attempt that reported existing resources. Verify the current AWS account and Terraform state before applying or destroying; do not assume the diagram means resources are absent or that Terraform currently manages them.
 
 ## Design decisions
 
