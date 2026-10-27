@@ -1,17 +1,19 @@
 environment = "prod"
 company     = "bjit"
 project     = "tfassign"
+owner       = "sumaiya"
+student_id  = "30245"
 aws_region  = "us-east-1"
 
 enable_versioning         = true
 enable_dynamodb           = true
 enable_iam_role           = true
-enable_ssm_parameters    = true
-enable_cloudwatch_logs   = true
-enable_lifecycle_rule    = true
-enable_ec2_test_instance = false
-ec2_free_tier_approved   = false
-prevent_destroy          = true
+enable_ssm_parameters     = true
+enable_cloudwatch_logs    = true
+enable_lifecycle_rule     = true
+enable_ec2_test_instance  = false
+ec2_free_tier_approved    = false
+prevent_destroy           = true
 lifecycle_expiration_days = 90
 
 ssm_parameters = {
@@ -26,7 +28,6 @@ log_groups = {
 }
 
 tags = {
-  Owner       = "Your-name-here"
   CostCenter  = "training"
   ManagedBy   = "terraform"
   Environment = "prod"

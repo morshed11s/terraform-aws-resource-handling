@@ -50,4 +50,12 @@ The bucket is private. SSH is closed unless CIDRs are supplied. The IAM policy i
 
 The supplied environment files enable DynamoDB, IAM, SSM, and CloudWatch logs. S3 versioning is off in dev and on in staging and prod; lifecycle expiration is enabled in all three. EC2 is off in every supplied environment and is restricted to dev with explicit approval.
 
-This is a configuration-only project; no AWS resources have been applied. No Terraform modules are used. Resource names are assembled in `locals.tf` from company, project, environment, resource type, and region.
+This is a configuration-only project; no AWS resources have been applied. No Terraform modules are used. Resource names are assembled in `locals.tf` from company, project, the `owner` and `student_id` variables, environment, resource type, and region; for example, `bjit-tfassign-sumaiya-30245-dev-config-table-use1`.
+
+## Design decisions
+
+- One flat Terraform root keeps the assignment easy to inspect; environment differences are inputs from separate tfvars files rather than copied configurations.
+- A shared naming prefix combines company, project, owner, student ID, environment, resource type, and region to make ownership and environment clear in AWS.
+- `count` is used for optional singleton resources, while `for_each` creates parameter and log-group resources from keyed maps.
+- Optional features are controlled by variables, and IAM permissions are limited to the application's bucket and SSM parameters.
+- Cost-sensitive or risky resources are constrained: EC2 is opt-in and dev-only, SSH ingress is empty unless CIDRs are supplied, and log retention is bounded.

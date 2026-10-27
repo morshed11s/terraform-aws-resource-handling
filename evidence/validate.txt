@@ -1,1 +1,0 @@
-Pending: run `terraform validate` after `terraform init` and paste the actual command output here.

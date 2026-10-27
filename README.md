@@ -16,6 +16,9 @@ The root configuration manages an application S3 bucket, optional PAY_PER_REQUES
 |-- s3.tf / dynamodb.tf / iam.tf / ssm.tf / cloudwatch.tf
 |-- security-group.tf / ec2-optional.tf / outputs.tf
 |-- backend-example.tf
+|-- Makefile
+|-- .tflint.hcl
+|-- .github/workflows/terraform.yml
 |-- envs/       dev.tfvars, staging.tfvars, prod.tfvars
 |-- docs/       architecture.md, cost-notes.md
 `-- evidence/   command-output placeholders
@@ -86,10 +89,33 @@ terraform destroy -var-file="envs/dev.tfvars"
 
 Confirm the environment and Terraform state before approving the destroy prompt. This is local state by default; do not share a state file across environments.
 
+## Bonus tooling
+
+The Makefile provides shortcuts for formatting, validation, environment plans, and the dev destroy command. GNU Make must be installed and available on `PATH`:
+
+```sh
+make fmt
+make validate
+make plan-dev
+make plan-staging
+make plan-prod
+make destroy-dev
+```
+
+`make destroy-dev` deletes resources managed by the selected dev state; inspect the plan and confirm the prompt before proceeding. The `tflint` target requires TFLint to be installed and downloads the AWS ruleset on its first run:
+
+```sh
+make tflint
+```
+
+GitHub Actions runs `terraform fmt -check -recursive` and `terraform validate` on pushes and pull requests. It initializes with `-backend=false`, so it does not need AWS credentials or access to a remote state backend.
+
+The commented S3 backend example in [backend-example.tf](backend-example.tf) shows remote state encryption and DynamoDB state locking. Create the bucket and lock table separately before enabling it, then migrate state with `terraform init -migrate-state`. Keep backend configuration and credentials out of source control.
+
 ## Terraform features demonstrated
 
 - Environment-specific behavior through `envs/dev.tfvars`, `envs/staging.tfvars`, and `envs/prod.tfvars`.
-- Conditional naming via locals for environment and region short names.
+- Conditional naming via locals for company, project, owner and student ID variables, environment, resource type, and region short names.
 - `count` for optional singleton resources; `for_each` for SSM parameters and CloudWatch log groups.
 - Dynamic blocks for optional S3 lifecycle rules, IAM policy statements, and security-group ingress rules.
 - Variable validation for environment, identifiers, supported regions, lifecycle/retention values, CIDRs, production tags, and cost-sensitive EC2 settings.

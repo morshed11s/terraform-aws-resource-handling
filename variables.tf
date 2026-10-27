@@ -28,6 +28,26 @@ variable "project" {
   }
 }
 
+variable "owner" {
+  description = "Lowercase owner identifier included in resource names and tags."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[a-z0-9][a-z0-9-]{0,14}$", var.owner))
+    error_message = "Owner must be lowercase, start with a letter or number, and contain at most 15 letters, numbers, or hyphens."
+  }
+}
+
+variable "student_id" {
+  description = "Student identifier included in resource names."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[0-9]+$", var.student_id))
+    error_message = "Student ID must contain only digits."
+  }
+}
+
 variable "aws_region" {
   description = "AWS region. The supported regions have a short-name mapping in locals.tf."
   type        = string
@@ -51,7 +71,7 @@ variable "tags" {
     condition = var.environment != "prod" || (
       lookup(var.tags, "Environment", "") == "prod" &&
       lookup(var.tags, "DataClass", "") == "internal" &&
-      length(trimspace(lookup(var.tags, "Owner", ""))) > 0 &&
+      length(trimspace(var.owner)) > 0 &&
       length(trimspace(lookup(var.tags, "CostCenter", ""))) > 0 &&
       length(trimspace(lookup(var.tags, "ManagedBy", ""))) > 0
     )
