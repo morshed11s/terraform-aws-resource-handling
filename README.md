@@ -4,6 +4,10 @@
 
 This is a flat, single-root Terraform project for managing dev, staging, and prod configurations in AWS. The same Terraform files are reused; an environment is selected with its corresponding file in `envs/`. The project demonstrates Terraform fundamentals and AWS resource configuration. No Terraform modules are used.
 
+## Latest deployment status
+
+The latest recorded dev destroy completed successfully: `evidence/destroy-dev.txt` reports **14 resources destroyed**. This describes resources tracked by that Terraform state at the time of the command; it does not establish that unrelated or manually created AWS resources are absent. Check the AWS account and state before any new plan, apply, or destroy.
+
 ## Repository structure
 
 Each file is listed on its own line for readability. Generated Terraform state, plans, and the `.terraform/` working directory are local-only and are intentionally not listed here.
@@ -128,59 +132,55 @@ Run commands from the repository root in PowerShell. Ensure the AWS account and 
 
 ## Required Terraform commands
 
-The assignment requires running these commands and saving the actual output under `evidence/`. For example, in PowerShell, redirect a command's output with `2>&1 | Out-File -Encoding utf8`; check the command's exit status in the terminal and do not treat an error log as a successful run. Do not replace evidence with fabricated or edited output.
-
-```powershell
-New-Item -ItemType Directory -Force evidence | Out-Null
-```
+The assignment requires running these commands and saving the actual output under `evidence/`. These PowerShell examples use `Tee-Object` to display output in the terminal while saving it. Check each command's exit status; do not treat an error log as a successful run or replace evidence with fabricated or edited output.
 
 Initialize Terraform:
 
 ```powershell
-terraform init 2>&1 | Out-File -Encoding utf8 evidence\terraform-init.txt
+terraform init 2>&1 | Tee-Object -FilePath "evidence\terraform-init.txt"
 ```
 
 Format all Terraform files:
 
 ```powershell
-terraform fmt -recursive 2>&1 | Out-File -Encoding utf8 evidence\terraform-fmt.txt
+terraform fmt -recursive 2>&1 | Tee-Object -FilePath "evidence\terraform-fmt.txt"
 ```
 
 Validate the configuration:
 
 ```powershell
-terraform validate 2>&1 | Out-File -Encoding utf8 evidence\terraform-validate.txt
+terraform validate 2>&1 | Tee-Object -FilePath "evidence\terraform-validate.txt"
 ```
 
 Create and save the dev plan:
 
 ```powershell
-terraform plan -var-file="envs/dev.tfvars" -out="dev.tfplan" 2>&1 | Out-File -Encoding utf8 evidence\plan-dev.txt
+terraform plan -var-file="envs/dev.tfvars" -out="dev.tfplan" 2>&1 | Tee-Object -FilePath "evidence\plan-dev.txt"
 ```
 
 Review the plan carefully before applying. Applying can create billable resources:
 
 ```powershell
-terraform apply "dev.tfplan" 2>&1 | Out-File -Encoding utf8 evidence\apply-dev.txt
+terraform apply "dev.tfplan" 2>&1 | Tee-Object -FilePath "evidence\apply-dev.txt"
 ```
 
 Show Terraform outputs:
 
 ```powershell
-terraform output 2>&1 | Out-File -Encoding utf8 evidence\output-dev.txt
+terraform output 2>&1 | Tee-Object -FilePath "evidence\output-dev.txt"
 ```
 
 After verifying dev resources, destroy only the intended dev resources. This is destructive; review Terraform's proposed deletions and confirm only if they are correct:
 
 ```powershell
-terraform destroy -var-file="envs/dev.tfvars" 2>&1 | Out-File -Encoding utf8 evidence\destroy-dev.txt
+terraform destroy -var-file="envs/dev.tfvars" 2>&1 | Tee-Object -FilePath "evidence\destroy-dev.txt"
 ```
 
 Create staging and prod plans for review only:
 
 ```powershell
-terraform plan -var-file="envs/staging.tfvars" 2>&1 | Out-File -Encoding utf8 evidence\plan-staging.txt
-terraform plan -var-file="envs/prod.tfvars" 2>&1 | Out-File -Encoding utf8 evidence\plan-prod.txt
+terraform plan -var-file="envs/staging.tfvars" 2>&1 | Tee-Object -FilePath "evidence\plan-staging.txt"
+terraform plan -var-file="envs/prod.tfvars" 2>&1 | Tee-Object -FilePath "evidence\plan-prod.txt"
 ```
 
 Plans can refresh AWS state but do not create resources. Never apply the staging or prod plans for this assignment.
@@ -240,7 +240,7 @@ The workflow at [.github/workflows/terraform.yml](.github/workflows/terraform.ym
 
 ## Submission checklist
 
-- Run every required command and save its actual output in `evidence/`.
+- Run every required command and save its actual output in `evidence/`; the current folder contains init, format, validation, plans, apply, output, and destroy logs, plus screenshots.
 - Review plans and verify the AWS account, region, resource names, and expected changes.
 - Apply and destroy dev only, as required; keep staging and prod plan-only.
 - Include the architecture and design explanation in [docs/architecture.md](docs/architecture.md).
