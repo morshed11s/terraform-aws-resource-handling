@@ -238,13 +238,3 @@ The workflow at [.github/workflows/terraform.yml](.github/workflows/terraform.ym
 
 [backend-example.tf](backend-example.tf) contains a commented S3 backend configuration with encryption and DynamoDB locking. The backend is not enabled. Create the state bucket and lock table separately before enabling it, then use `terraform init -migrate-state` if migrating existing state. Do not commit credentials or state data.
 
-## Submission checklist
-
-- Run every required command and save its actual output in `evidence/`; the current folder contains init, format, validation, plans, apply, output, and destroy logs, plus screenshots.
-- Review plans and verify the AWS account, region, resource names, and expected changes.
-- Apply and destroy dev only, as required; keep staging and prod plan-only.
-- Include the architecture and design explanation in [docs/architecture.md](docs/architecture.md).
-- Include a cost estimate and its assumptions in [docs/cost-notes.md](docs/cost-notes.md).
-- Capture the requested folder structure and relevant AWS/GitHub Actions evidence.
-- Explain naming, `count` versus `for_each`, dynamic blocks, tfvars, and cost controls.
-- Keep state, plans, credentials, and secrets out of Git.
