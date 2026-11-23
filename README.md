@@ -1,4 +1,4 @@
-# AWS Terraform Assignment
+# AWS Terraform (provisioning)
 
 ## Project overview
 
@@ -93,7 +93,7 @@ No NAT Gateway, load balancer, RDS database, EKS, OpenSearch, Elastic IP, or alw
 Names use the company, project, owner, student ID, environment, resource type, and short region code. For example, the dev DynamoDB table name is:
 
 ```text
-bjit-tfassign-sumaiya-30245-dev-config-table-use1
+organization-tfassign-owner-student_id-dev-config-table-use1
 ```
 
 The `owner` and `student_id` variables are set in each environment's tfvars file. Adjust these values if needed; S3 bucket names must also be globally unique.
